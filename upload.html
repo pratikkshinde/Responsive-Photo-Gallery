@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhotoGallery - Upload</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <a href="index.html">
+                    <i class="fas fa-camera"></i>
+                    <span>PhotoGallery</span>
+                </a>
+            </div>
+            
+            <div class="nav-links" id="navLinks">
+                <a href="index.html"><i class="fas fa-home"></i> Home</a>
+                <a href="gallery.html"><i class="fas fa-images"></i> Gallery</a>
+                <a href="upload.html" class="active"><i class="fas fa-upload"></i> Upload</a>
+                <a href="about.html"><i class="fas fa-info-circle"></i> About</a>
+            </div>
+            
+            <div class="hamburger" id="hamburger">
+                <i class="fas fa-bars"></i>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Upload Section -->
+    <section class="upload-section">
+        <div class="container">
+            <div class="upload-container">
+                <h2 class="section-title">Upload Your Photos</h2>
+                <p class="upload-description">Share your memories with the community. Supported formats: JPG, PNG, WEBP (Max 5MB)</p>
+                
+                <div class="upload-area" id="uploadArea">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Drag & drop your images here or click to browse</p>
+                    <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" multiple>
+                    <button class="btn btn-primary" id="browseBtn">Browse Files</button>
+                </div>
+                
+                <div class="preview-section" id="previewSection" style="display: none;">
+                    <h3>Preview</h3>
+                    <div class="preview-grid" id="previewGrid"></div>
+                    <div class="upload-actions">
+                        <button class="btn btn-primary" id="uploadBtn">Upload Photos</button>
+                        <button class="btn btn-secondary" id="clearBtn">Clear All</button>
+                    </div>
+                </div>
+                
+                <div id="uploadMessage" class="upload-message"></div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2024 PhotoGallery. All rights reserved.</p>
+            <div class="social-links">
+                <a href="#"><i class="fab fa-facebook"></i></a>
+                <a href="#"><i class="fab fa-twitter"></i></a>
+                <a href="#"><i class="fab fa-instagram"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+    <script src="js/upload.js"></script>
+</body>
+</html>
