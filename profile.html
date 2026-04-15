@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AfterGlow - Profile</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .profile-header {
+            max-width: 900px;
+            margin: 0 auto 3rem;
+            display: flex;
+            align-items: center;
+            gap: 3rem;
+            padding: 2rem;
+            background: var(--surface-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 1.5rem;
+            backdrop-filter: blur(16px);
+        }
+        .profile-pic {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--primary-color);
+            box-shadow: var(--shadow-glow);
+        }
+        .profile-info { flex: 1; }
+        .profile-info h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--white);
+        }
+        .profile-info p.bio {
+            color: var(--text-light);
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+        .profile-stats {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+        }
+        .profile-stats span {
+            color: var(--white);
+            font-size: 1.1rem;
+        }
+        .profile-stats strong { font-family: 'Outfit'; font-size: 1.3rem; }
+        .settings-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .settings-content {
+            background: var(--dark-bg);
+            border: 1px solid var(--glass-border);
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            width: 100%; max-width: 500px;
+        }
+        .settings-content h2 { margin-bottom: 1.5rem; color: var(--white); }
+        .form-group { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+        .form-group input, .form-group textarea {
+            padding: 0.8rem; background: rgba(255,255,255,0.05); color: var(--white); border: 1px solid var(--glass-border); border-radius: 0.5rem;
+        }
+        .settings-actions { display: flex; gap: 1rem; margin-top: 2rem; }
+        /* Logout */
+        .btn-logout { background: transparent; border: 1px solid var(--danger-color); color: var(--danger-color); }
+        .btn-logout:hover { background: var(--danger-color); color: var(--white); }
+        /* Pinterest style grid for profile */
+        .pin-grid {
+            columns: 3 250px;
+            column-gap: 1.5rem;
+            max-width: 1200px; margin: 0 auto;
+        }
+        .pin-item {
+            break-inside: avoid; margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <a href="index.html">
+                    <i class="fas fa-camera-retro"></i>
+                    <span>AfterGlow</span>
+                </a>
+            </div>
+            <div class="nav-links" id="navLinks">
+                <a href="index.html"><i class="fas fa-home"></i> Home</a>
+                <a href="gallery.html"><i class="fas fa-images"></i> Gallery</a>
+                <a href="upload.html"><i class="fas fa-upload"></i> Upload</a>
+                <a href="profile.html" class="active" id="nav-profile-link"><i class="fas fa-user-circle"></i> Profile</a>
+            </div>
+            <div class="hamburger" id="hamburger">
+                <i class="fas fa-bars"></i>
+            </div>
+        </div>
+    </nav>
+
+    <div class="gallery-section">
+        <div class="profile-header">
+            <img id="prof-pic" src="https://via.placeholder.com/150" alt="Profile" class="profile-pic">
+            <div class="profile-info">
+                <h1 id="prof-username">Loading...</h1>
+                <div class="profile-stats">
+                    <span><strong id="prof-post-count">0</strong> Posts</span>
+                </div>
+                <p class="bio" id="prof-bio">No bio available.</p>
+                <button class="btn btn-secondary" onclick="openSettings()"><i class="fas fa-cog"></i> Edit Profile</button>
+                <button class="btn btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            </div>
+        </div>
+
+        <div class="pin-grid" id="profile-gallery">
+            <!-- Loading -->
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="settings-modal" id="settingsModal">
+        <div class="settings-content">
+            <h2>Edit Profile</h2>
+            <form id="settings-form">
+                <div class="form-group">
+                    <label>Profile Picture</label>
+                    <input type="file" id="set-pic" accept="image/*">
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="set-username">
+                </div>
+                <div class="form-group">
+                    <label>Bio</label>
+                    <textarea id="set-bio" rows="3"></textarea>
+                </div>
+                <div class="settings-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeSettings()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        // Use the auth redirect from main.js (implemented later)
+        document.addEventListener('DOMContentLoaded', async () => {
+            const token = localStorage.getItem('ag_token');
+            if(!token) window.location.href = 'auth.html';
+
+            // Load User Data
+            const res = await fetch('/api/user/me', { headers: { 'Authorization': 'Bearer ' + token }});
+            if(res.ok) {
+                const user = await res.json();
+                document.getElementById('prof-username').innerText = user.username;
+                document.getElementById('set-username').value = user.username;
+                document.getElementById('prof-bio').innerText = user.bio || 'Add a bio...';
+                document.getElementById('set-bio').value = user.bio || '';
+                if(user.profile_picture_url) document.getElementById('prof-pic').src = user.profile_picture_url;
+            } else {
+                logout();
+            }
+
+            // Load User Photos
+            const pRes = await fetch('/api/photos/me', { headers: { 'Authorization': 'Bearer ' + token }});
+            if(pRes.ok) {
+                const photos = await pRes.json();
+                document.getElementById('prof-post-count').innerText = photos.length;
+                const grid = document.getElementById('profile-gallery');
+                grid.innerHTML = photos.map(p => `
+                    <div class="gallery-item pin-item">
+                        <img src="${p.src}" alt="${p.title}">
+                        <button class="delete-btn" onclick="deletePhoto(${p.id})"><i class="fas fa-trash"></i></button>
+                    </div>
+                `).join('');
+            }
+        });
+
+        // Settings Logic
+        function openSettings() { document.getElementById('settingsModal').style.display = 'flex'; }
+        function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
+        
+        document.getElementById('settings-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const token = localStorage.getItem('ag_token');
+            const fd = new FormData();
+            fd.append('username', document.getElementById('set-username').value);
+            fd.append('bio', document.getElementById('set-bio').value);
+            const pic = document.getElementById('set-pic').files[0];
+            if(pic) fd.append('profilePic', pic);
+
+            await fetch('/api/user/profile', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token },
+                body: fd
+            });
+            window.location.reload();
+        });
+
+        async function deletePhoto(id) {
+            if(!confirm("Remove this photo from your profile?")) return;
+            const token = localStorage.getItem('ag_token');
+            await fetch(`/api/photos/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            window.location.reload();
+        }
+
+        function logout() {
+            localStorage.removeItem('ag_token');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

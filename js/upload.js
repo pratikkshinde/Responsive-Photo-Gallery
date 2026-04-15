@@ -10,24 +10,28 @@ document.addEventListener('DOMContentLoaded', () => {
     if (uploadArea) {
         // Click to browse
         uploadArea.addEventListener('click', () => {
+            if (fileInput.disabled) return;
             fileInput.click();
         });
         
         // Drag and drop
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
+            if (fileInput.disabled) return;
             uploadArea.style.borderColor = 'var(--primary-dark)';
             uploadArea.style.background = 'rgba(99, 102, 241, 0.05)';
         });
         
         uploadArea.addEventListener('dragleave', (e) => {
             e.preventDefault();
+            if (fileInput.disabled) return;
             uploadArea.style.borderColor = 'var(--primary-color)';
             uploadArea.style.background = 'var(--light-color)';
         });
         
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
+            if (fileInput.disabled) return;
             uploadArea.style.borderColor = 'var(--primary-color)';
             uploadArea.style.background = 'var(--light-color)';
             
@@ -37,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // File input change
         fileInput.addEventListener('change', (e) => {
+            if (fileInput.disabled) return;
             const files = Array.from(e.target.files);
             handleFiles(files);
         });
@@ -45,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (browseBtn) {
             browseBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
+                if (fileInput.disabled) return;
                 fileInput.click();
             });
         }
@@ -59,7 +65,33 @@ document.addEventListener('DOMContentLoaded', () => {
             clearBtn.addEventListener('click', clearAll);
         }
     }
+
+    checkUploadAuth();
 });
+
+function checkUploadAuth() {
+    const token = localStorage.getItem('ag_token');
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const browseBtn = document.getElementById('browseBtn');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const clearBtn = document.getElementById('clearBtn');
+
+    const isLoggedIn = Boolean(token);
+
+    if (uploadArea) {
+        uploadArea.classList.toggle('disabled', !isLoggedIn);
+    }
+    if (fileInput) fileInput.disabled = !isLoggedIn;
+    if (browseBtn) browseBtn.disabled = !isLoggedIn;
+    if (uploadBtn) uploadBtn.disabled = !isLoggedIn;
+    if (clearBtn) clearBtn.disabled = !isLoggedIn;
+
+    if (!isLoggedIn) {
+        showMessage('Login required to upload photos. <a href="auth.html" class="auth-link">Sign in</a>.', 'error', true, false);
+    }
+}
+
 
 function handleFiles(files) {
     // Filter images only
@@ -124,84 +156,81 @@ function clearAll() {
     showMessage('All files cleared', 'success');
 }
 
-function uploadPhotos() {
+async function uploadPhotos() {
     if (selectedFiles.length === 0) {
         showMessage('Please select photos to upload', 'error');
         return;
     }
     
+    const token = localStorage.getItem('ag_token');
+    if(!token) {
+        showMessage('You must be logged in to upload photos.', 'error');
+        setTimeout(() => window.location.href = 'auth.html', 2000);
+        return;
+    }
+
     const uploadBtn = document.getElementById('uploadBtn');
     uploadBtn.disabled = true;
     uploadBtn.textContent = 'Uploading...';
     
-    // Get existing uploaded photos
-    const existingPhotos = JSON.parse(localStorage.getItem('galleryPhotos') || '[]');
-    
-    // Process each file
-    const uploadPromises = selectedFiles.map((file, index) => {
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                const photoId = `uploaded_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`;
-                const newPhoto = {
-                    id: photoId,
-                    src: e.target.result,
-                    title: file.name,
-                    type: 'uploaded',
-                    date: new Date().toISOString(),
-                    size: file.size
-                };
-                
-                resolve(newPhoto);
-            };
-            
-            reader.readAsDataURL(file);
-        });
-    });
-    
-    Promise.all(uploadPromises).then(newPhotos => {
-        // Add new photos to existing ones
-        const updatedPhotos = [...existingPhotos, ...newPhotos];
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const file of selectedFiles) {
+        const formData = new FormData();
+        formData.append('photo', file);
         
-        // Save to localStorage
-        localStorage.setItem('galleryPhotos', JSON.stringify(updatedPhotos));
-        
-        // Show success message
-        showMessage(`Successfully uploaded ${newPhotos.length} photo(s)!`, 'success');
-        
-        // Clear preview
-        clearAll();
-        
-        // Update stats if on home page
-        if (typeof updateStats === 'function') {
-            updateStats();
+        try {
+            const response = await fetch('/api/photos', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                },
+                body: formData
+            });
+
+            if (response.ok) {
+                successCount++;
+            } else {
+                errorCount++;
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            errorCount++;
         }
-        
-        // Optional: Ask if user wants to go to gallery
+    }
+    
+    uploadBtn.disabled = false;
+    uploadBtn.textContent = 'Upload Photos';
+
+    if (successCount > 0) {
+        showMessage(`Successfully uploaded ${successCount} photo(s)!`, 'success');
+        clearAll();
         setTimeout(() => {
             if (confirm('Photos uploaded successfully! Would you like to view them in the gallery?')) {
                 window.location.href = 'gallery.html';
             }
-        }, 500);
-    }).catch(error => {
+        }, 1500);
+    } else {
         showMessage('Error uploading photos. Please try again.', 'error');
-        console.error('Upload error:', error);
-    }).finally(() => {
-        uploadBtn.disabled = false;
-        uploadBtn.textContent = 'Upload Photos';
-    });
+    }
 }
 
-function showMessage(message, type) {
+function showMessage(message, type, allowHTML = false, autoClear = true) {
     const messageDiv = document.getElementById('uploadMessage');
     if (messageDiv) {
-        messageDiv.textContent = message;
+        if (allowHTML) {
+            messageDiv.innerHTML = message;
+        } else {
+            messageDiv.textContent = message;
+        }
         messageDiv.className = `upload-message ${type}`;
         
-        setTimeout(() => {
-            messageDiv.textContent = '';
-            messageDiv.className = 'upload-message';
-        }, 5000);
+        if (autoClear) {
+            setTimeout(() => {
+                messageDiv.textContent = '';
+                messageDiv.className = 'upload-message';
+            }, 5000);
+        }
     }
 }

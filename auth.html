@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AfterGlow - Authentication</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .auth-section {
+            padding: 120px 2rem 5rem;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .auth-card {
+            background: var(--surface-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(16px);
+            padding: 3rem;
+            border-radius: 1.5rem;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: var(--shadow-glow);
+        }
+        .auth-title {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+            color: var(--white);
+        }
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .form-group label {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        .form-group input {
+            padding: 1rem;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 0.5rem;
+            color: var(--white);
+            font-family: inherit;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        .auth-toggle {
+            text-align: center;
+            margin-top: 2rem;
+            color: var(--text-light);
+        }
+        .auth-toggle a {
+            color: var(--primary-color);
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        #register-form { display: none; }
+        #auth-error {
+            color: var(--danger-color);
+            text-align: center;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <a href="index.html">
+                    <i class="fas fa-camera-retro"></i>
+                    <span>AfterGlow</span>
+                </a>
+            </div>
+            <div class="nav-links" id="navLinks">
+                <a href="index.html"><i class="fas fa-home"></i> Home</a>
+                <a href="gallery.html"><i class="fas fa-images"></i> Gallery</a>
+                <a href="upload.html"><i class="fas fa-upload"></i> Upload</a>
+                <a href="auth.html" class="active"><i class="fas fa-sign-in-alt"></i> Login</a>
+            </div>
+            <div class="hamburger" id="hamburger">
+                <i class="fas fa-bars"></i>
+            </div>
+        </div>
+    </nav>
+
+    <div class="auth-section">
+        <div class="auth-card">
+            <h2 class="auth-title" id="auth-title">Welcome Back</h2>
+            <div id="auth-error"></div>
+            
+            <form id="login-form" class="auth-form">
+                <div class="form-group">
+                    <label>Username or Email</label>
+                    <input type="text" id="login-user" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Login</button>
+                <div class="auth-toggle">
+                    Don't have an account? <a onclick="toggleAuth()">Sign up</a>
+                </div>
+            </form>
+
+            <form id="register-form" class="auth-form">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="reg-email" required>
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="reg-username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="reg-password" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Create Account</button>
+                <div class="auth-toggle">
+                    Already have an account? <a onclick="toggleAuth()">Login</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        let isLogin = true;
+        function toggleAuth() {
+            isLogin = !isLogin;
+            document.getElementById('login-form').style.display = isLogin ? 'flex' : 'none';
+            document.getElementById('register-form').style.display = isLogin ? 'none' : 'flex';
+            document.getElementById('auth-title').innerText = isLogin ? 'Welcome Back' : 'Join AfterGlow';
+            document.getElementById('auth-error').innerText = '';
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const login = document.getElementById('login-user').value;
+            const pass = document.getElementById('login-password').value;
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ login, password: pass })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    localStorage.setItem('ag_token', data.token);
+                    window.location.href = 'profile.html';
+                } else {
+                    document.getElementById('auth-error').innerText = data.error;
+                }
+            } catch (err) {
+                document.getElementById('auth-error').innerText = 'Connection error';
+            }
+        });
+
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('reg-email').value;
+            const username = document.getElementById('reg-username').value;
+            const pass = document.getElementById('reg-password').value;
+            try {
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, username, password: pass })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    localStorage.setItem('ag_token', data.token);
+                    window.location.href = 'profile.html';
+                } else {
+                    document.getElementById('auth-error').innerText = data.error;
+                }
+            } catch (err) {
+                document.getElementById('auth-error').innerText = 'Connection error';
+            }
+        });
+    </script>
+</body>
+</html>

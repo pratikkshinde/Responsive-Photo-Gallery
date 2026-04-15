@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PhotoGallery - Home</title>
+    <title>AfterGlow - Capture the Moment</title>
     <link rel="stylesheet" href="css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -14,8 +16,8 @@
         <div class="nav-container">
             <div class="logo">
                 <a href="index.html">
-                    <i class="fas fa-camera"></i>
-                    <span>PhotoGallery</span>
+                    <i class="fas fa-camera-retro"></i>
+                    <span>AfterGlow</span>
                 </a>
             </div>
             
@@ -23,7 +25,7 @@
                 <a href="index.html" class="active"><i class="fas fa-home"></i> Home</a>
                 <a href="gallery.html"><i class="fas fa-images"></i> Gallery</a>
                 <a href="upload.html"><i class="fas fa-upload"></i> Upload</a>
-                <a href="about.html"><i class="fas fa-info-circle"></i> About</a>
+                <a href="profile.html"><i class="fas fa-user-circle"></i> Profile</a>
             </div>
             
             <div class="hamburger" id="hamburger">
@@ -34,12 +36,29 @@
 
     <!-- Hero Section -->
     <section class="hero">
+        <div class="hero-bg-elements">
+            <!-- Simulated floating photo cards -->
+            <div class="floating-img float-1">
+                <img id="heroImage1" src="/uploads/profiles/1775980620187.jpeg" alt="Gallery preview">
+            </div>
+            <div class="floating-img float-2">
+                <img id="heroImage2" src="images/gallery/photo2.jpg" alt="Gallery preview" onerror="this.src='https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=2074&auto=format&fit=crop'">
+            </div>
+            <div class="floating-img float-3">
+                <img id="heroImage3" src="images/gallery/photo3.jpg" alt="Gallery preview" onerror="this.src='https://images.unsplash.com/photo-1493246507139-91e8fad9978e?q=80&w=2070&auto=format&fit=crop'">
+            </div>
+            <div class="floating-img float-4">
+                <img id="heroImage4" src="images/gallery/photo4.jpg" alt="Gallery preview" onerror="this.src='https://images.unsplash.com/photo-1506744012022-df38ba83437e?q=80&w=2070&auto=format&fit=crop'">
+            </div>
+        </div>
+        
         <div class="hero-content">
-            <h1>Welcome to PhotoGallery</h1>
-            <p>Discover, share, and inspire with amazing photography from our community</p>
+            <div class="hero-badge"><i class="fas fa-star" style="color: var(--accent-color); margin-right: 5px;"></i> Premium Photography Platform</div>
+            <h1>Illuminate Your<br>Best Memories</h1>
+            <p>A beautifully designed, deeply immersive gallery experience. Discover, share, and inspire the world with your photography collection.</p>
             <div class="hero-buttons">
-                <a href="gallery.html" class="btn btn-primary">Explore Gallery</a>
-                <a href="upload.html" class="btn btn-secondary">Upload Your Photos</a>
+                <a href="gallery.html" class="btn btn-primary"><i class="fas fa-compass"></i> Explore Gallery</a>
+                <a href="upload.html" class="btn btn-secondary"><i class="fas fa-cloud-upload-alt"></i> Upload Photos</a>
             </div>
         </div>
     </section>
@@ -47,22 +66,29 @@
     <!-- Features Section -->
     <section class="features">
         <div class="container">
-            <h2 class="section-title">Why Choose Us?</h2>
+            <h2 class="section-subtitle">Why AfterGlow</h2>
+            <h2 class="section-title">A Seamless Experience</h2>
             <div class="features-grid">
                 <div class="feature-card">
-                    <i class="fas fa-mobile-alt"></i>
-                    <h3>Fully Responsive</h3>
-                    <p>Access your gallery from any device - desktop, tablet, or mobile</p>
+                    <div class="feature-icon-wrapper">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <h3>Fluid & Responsive</h3>
+                    <p>Designed to seamlessly adapt to any monitor or smartphone screen.</p>
                 </div>
                 <div class="feature-card">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <h3>Easy Upload</h3>
-                    <p>Share your memories instantly with our simple upload system</p>
+                    <div class="feature-icon-wrapper">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h3>Instant Uploads</h3>
+                    <p>Optimized architecture ensures high-definition memories are processed in seconds.</p>
                 </div>
                 <div class="feature-card">
-                    <i class="fas fa-images"></i>
-                    <h3>Beautiful Gallery</h3>
-                    <p>View photos in a stunning grid layout with lightbox preview</p>
+                    <div class="feature-icon-wrapper">
+                        <i class="fas fa-eye"></i>
+                    </div>
+                    <h3>Cinematic Lightbox</h3>
+                    <p>Experience photography with true-to-life color grading and preview modes.</p>
                 </div>
             </div>
         </div>
@@ -74,15 +100,15 @@
             <div class="stats-grid">
                 <div class="stat-item">
                     <h3 id="photoCount">0</h3>
-                    <p>Total Photos</p>
+                    <p>Memories Shared</p>
                 </div>
                 <div class="stat-item">
-                    <h3>100+</h3>
-                    <p>Happy Users</p>
+                    <h3>99.9%</h3>
+                    <p>Uptime Reliability</p>
                 </div>
                 <div class="stat-item">
                     <h3>24/7</h3>
-                    <p>Access Available</p>
+                    <p>Global Availability</p>
                 </div>
             </div>
         </div>
@@ -90,11 +116,12 @@
 
     <footer>
         <div class="footer-content">
-            <p>&copy; 2024 PhotoGallery. All rights reserved.</p>
+            <p>Made with &nbsp;<i class="fas fa-heart" style="color: var(--primary-color);"></i>&nbsp; &copy; 2026 AfterGlow.</p>
             <div class="social-links">
-                <a href="#"><i class="fab fa-facebook"></i></a>
                 <a href="#"><i class="fab fa-twitter"></i></a>
-                <a href="#"><i class="fab fa-instagram"></i></a>
+                <a href="#"><i class="fab fa-dribbble"></i></a>
+                <a href="https://www.instagram.com/pratikkshinde_/">
+                    <i class="fab fa-instagram"></i></a>
             </div>
         </div>
     </footer>
