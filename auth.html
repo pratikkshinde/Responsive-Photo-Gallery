@@ -168,7 +168,8 @@
                     document.getElementById('auth-error').innerText = data.error;
                 }
             } catch (err) {
-                document.getElementById('auth-error').innerText = 'Connection error';
+                console.error('Fetch Error:', err);
+                document.getElementById('auth-error').innerText = 'Connection error: ' + err.message;
             }
         });
 
@@ -191,7 +192,8 @@
                     document.getElementById('auth-error').innerText = data.error;
                 }
             } catch (err) {
-                document.getElementById('auth-error').innerText = 'Connection error';
+                console.error('Fetch Error:', err);
+                document.getElementById('auth-error').innerText = 'Connection error: ' + err.message;
             }
         });
     </script>

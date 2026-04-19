@@ -1,35 +1,53 @@
+require('dotenv').config();
 const express = require('express');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
-const db = require('./db');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const { User, Photo, dbConnect } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = 'afterglow_super_secret_key_2026'; // In prod, use environment variable
+const JWT_SECRET = process.env.JWT_SECRET || 'afterglow_super_secret_key_2026';
 
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static assets
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-// Serve static HTML/CSS/JS from root (excluding node_modules is handled implicitly if not hit)
+// Serve static HTML/CSS/JS from root 
 app.use(express.static(__dirname));
 
-// Multer Storage Configurations
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
+// DB Connection Middleware for API routes
+app.use('/api', async (req, res, next) => {
+    try {
+        await dbConnect();
+        next();
+    } catch (err) {
+        res.status(500).json({ error: 'Database connection failed' });
+    }
+});
+
+// Configure Cloudinary
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Multer Storage Configuration (Cloudinary)
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: async (req, file) => {
+        let folderName = 'photo-gallery/uploads';
         if (file.fieldname === 'profilePic') {
-            cb(null, 'uploads/profiles');
-        } else {
-            cb(null, 'uploads');
+            folderName = 'photo-gallery/profiles';
         }
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname));
+        return {
+            folder: folderName,
+            allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp']
+        };
     }
 });
 const upload = multer({ storage });
@@ -48,115 +66,165 @@ const verifyToken = (req, res, next) => {
 
 // --- AUTHENTICATION ROUTES ---
 
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
     const { username, email, password } = req.body;
     if (!username || !email || !password) return res.status(400).json({ error: 'All fields required' });
 
-    const hash = bcrypt.hashSync(password, 10);
+    try {
+        const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Username or email already exists' });
+        }
 
-    db.run('INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)', [username, email, hash], function(err) {
-        if (err) return res.status(400).json({ error: 'Username or email already exists' });
-        
-        const token = jwt.sign({ id: this.lastID }, JWT_SECRET, { expiresIn: 86400 });
-        res.json({ message: 'Registered successfully', token, user: { id: this.lastID, username, email } });
-    });
+        const hash = bcrypt.hashSync(password, 10);
+        const newUser = await User.create({ username, email, password_hash: hash });
+
+        const token = jwt.sign({ id: newUser._id }, JWT_SECRET, { expiresIn: 86400 });
+        res.json({ message: 'Registered successfully', token, user: { id: newUser._id, username, email } });
+    } catch (err) {
+        res.status(500).json({ error: 'Registration failed' });
+    }
 });
 
-app.post('/api/auth/login', (req, res) => {
-    const { login, password } = req.body; // login can be email or username
-    
-    db.get('SELECT * FROM users WHERE username = ? OR email = ?', [login, login], (err, user) => {
-        if (err || !user) return res.status(404).json({ error: 'User not found' });
+app.post('/api/auth/login', async (req, res) => {
+    const { login, password } = req.body;
+
+    try {
+        const user = await User.findOne({ $or: [{ username: login }, { email: login }] });
+        if (!user) return res.status(404).json({ error: 'User not found' });
 
         const isValid = bcrypt.compareSync(password, user.password_hash);
         if (!isValid) return res.status(401).json({ error: 'Invalid password' });
 
-        const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: 86400 });
-        res.json({ message: 'Login successful', token, user: { id: user.id, username: user.username, email: user.email, profile_picture_url: user.profile_picture_url } });
-    });
+        const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: 86400 });
+        res.json({ message: 'Login successful', token, user: { id: user._id, username: user.username, email: user.email, profile_picture_url: user.profile_picture_url } });
+    } catch (err) {
+        res.status(500).json({ error: 'Login failed' });
+    }
 });
 
 // --- USER ROUTES ---
 
-app.get('/api/user/me', verifyToken, (req, res) => {
-    db.get('SELECT id, username, email, bio, profile_picture_url FROM users WHERE id = ?', [req.userId], (err, user) => {
-        if (err || !user) return res.status(404).json({ error: 'User not found' });
+app.get('/api/user/me', verifyToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId).select('username email bio profile_picture_url');
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
         res.json(user);
-    });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
 });
 
-app.post('/api/user/profile', verifyToken, upload.single('profilePic'), (req, res) => {
+app.post('/api/user/profile', verifyToken, upload.single('profilePic'), async (req, res) => {
     const { username, bio } = req.body;
-    const profilePic = req.file ? `/uploads/profiles/${req.file.filename}` : null;
 
-    db.get('SELECT profile_picture_url FROM users WHERE id = ?', [req.userId], (err, user) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        // Multer-storage-cloudinary returns the URL in req.file.path
+        const profilePic = req.file ? req.file.path : null;
         const newPicUrl = profilePic || user.profile_picture_url;
-        
-        db.run('UPDATE users SET username = COALESCE(?, username), bio = COALESCE(?, bio), profile_picture_url = ? WHERE id = ?', 
-        [username, bio, newPicUrl, req.userId], function(err) {
-            if (err) return res.status(500).json({ error: 'Failed to update user' });
-            res.json({ message: 'Profile updated', profile_picture_url: newPicUrl });
-        });
-    });
+
+        user.username = username || user.username;
+        user.bio = bio !== undefined ? bio : user.bio;
+        user.profile_picture_url = newPicUrl;
+
+        await user.save();
+        res.json({ message: 'Profile updated', profile_picture_url: newPicUrl });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to update user' });
+    }
 });
 
 // --- PHOTO ROUTES ---
 
 // Upload photo
-app.post('/api/photos', verifyToken, upload.single('photo'), (req, res) => {
+app.post('/api/photos', verifyToken, upload.single('photo'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No photo uploaded' });
 
-    db.run('INSERT INTO photos (user_id, filename, original_name) VALUES (?, ?, ?)', 
-    [req.userId, `/uploads/${req.file.filename}`, req.file.originalname], function(err) {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        res.json({ message: 'Photo uploaded successfully', photo_id: this.lastID, src: `/uploads/${req.file.filename}` });
-    });
+    try {
+        // req.file.path contains the secure Cloudinary URL
+        const newPhoto = await Photo.create({
+            user_id: req.userId,
+            filename: req.file.path,
+            original_name: req.file.originalname
+        });
+
+        res.json({ message: 'Photo uploaded successfully', photo_id: newPhoto._id, src: req.file.path });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
-// Get all photos (Global Feed - only showing non-deleted by default, or all if we want to show all. 
-// "whatever images users are uploading that images shows to everyone... save in our database even after user removes it"
-// So we will hide it if deleted_by_user = 1)
-app.get('/api/photos', (req, res) => {
-    const query = `
-        SELECT p.id, p.filename as src, p.original_name as title, p.created_at as date, u.username 
-        FROM photos p 
-        JOIN users u ON p.user_id = u.id 
-        WHERE p.deleted_by_user = 0 
-        ORDER BY p.created_at DESC
-    `;
-    db.all(query, [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
-    });
+// Get all photos
+app.get('/api/photos', async (req, res) => {
+    try {
+        const photos = await Photo.find({ deleted_by_user: false })
+            .populate('user_id', 'username')
+            .sort({ created_at: -1 })
+            .lean();
+
+        // Map to expected format
+        const formattedPhotos = photos.map(p => ({
+            id: p._id,
+            src: p.filename,
+            title: p.original_name,
+            date: p.created_at,
+            username: p.user_id ? p.user_id.username : "Unknown"
+        }));
+
+        res.json(formattedPhotos);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // Get logged in user's photos
-app.get('/api/photos/me', verifyToken, (req, res) => {
-    const query = `
-        SELECT p.id, p.filename as src, p.original_name as title, p.created_at as date 
-        FROM photos p 
-        WHERE p.user_id = ? AND p.deleted_by_user = 0 
-        ORDER BY p.created_at DESC
-    `;
-    db.all(query, [req.userId], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
-    });
+app.get('/api/photos/me', verifyToken, async (req, res) => {
+    try {
+        const photos = await Photo.find({ user_id: req.userId, deleted_by_user: false })
+            .sort({ created_at: -1 })
+            .lean();
+
+        const formattedPhotos = photos.map(p => ({
+            id: p._id,
+            src: p.filename,
+            title: p.original_name,
+            date: p.created_at
+        }));
+
+        res.json(formattedPhotos);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-// "Delete" photo (Soft delete to satisfy condition 3)
-app.delete('/api/photos/:id', verifyToken, (req, res) => {
-    db.run('UPDATE photos SET deleted_by_user = 1 WHERE id = ? AND user_id = ?', 
-    [req.params.id, req.userId], function(err) {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        if (this.changes === 0) return res.status(404).json({ error: 'Photo not found or unauthorized' });
+// "Delete" photo (Soft delete)
+app.delete('/api/photos/:id', verifyToken, async (req, res) => {
+    try {
+        const photo = await Photo.findOneAndUpdate(
+            { _id: req.params.id, user_id: req.userId },
+            { deleted_by_user: true }
+        );
+
+        if (!photo) return res.status(404).json({ error: 'Photo not found or unauthorized' });
         res.json({ message: 'Photo removed from your profile (still archived in DB)' });
-    });
+    } catch (err) {
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
-// Serve frontend fallback for SPA (or just specific pages)
+// Serve frontend fallback for SPA
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`Server is running on http://localhost:${PORT}`);
+    });
+}
+
+module.exports = app;
