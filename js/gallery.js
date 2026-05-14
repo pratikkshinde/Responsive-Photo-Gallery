@@ -33,7 +33,7 @@ function displayGallery(photos) {
         <div class="gallery-item" data-id="${photo.id}" data-username="${photo.username}">
             <img src="${photo.src}" alt="Gallery photo" loading="lazy">
             <div class="gallery-item-info">
-                <p><strong>${photo.username}</strong></p>
+                <p><strong><a href="profile.html?username=${photo.username}" style="color:var(--primary-color); text-decoration:none;">@${photo.username}</a></strong></p>
             </div>
         </div>
     `).join('');
@@ -61,7 +61,7 @@ function openLightbox(imageSrc, username) {
     
     lightboxImage.src = imageSrc;
     lightboxCaption.innerHTML = `
-        <a href="profile.html" class="lightbox-user-link">${username}</a>
+        <a href="profile.html?username=${username}" class="lightbox-user-link">@${username}</a>
     `;
     lightbox.style.display = 'block';
 }

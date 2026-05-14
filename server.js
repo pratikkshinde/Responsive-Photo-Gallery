@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const cloudinary = require('cloudinary').v2;
+const admin = require('firebase-admin');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const { User, Photo, dbConnect } = require('./db');
 
@@ -15,9 +16,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'afterglow_super_secret_key_2026';
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Serve static HTML/CSS/JS from root 
-app.use(express.static(__dirname));
 
 // DB Connection Middleware for API routes
 app.use('/api', async (req, res, next) => {
@@ -35,6 +33,19 @@ cloudinary.config({
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
+
+// Configure Firebase Admin if credentials are available
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
+        const firebaseServiceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+        admin.initializeApp({ credential: admin.credential.cert(firebaseServiceAccount) });
+        console.log('Firebase Admin initialized');
+    } catch (err) {
+        console.warn('Failed to initialize Firebase Admin:', err.message);
+    }
+} else {
+    console.warn('FIREBASE_SERVICE_ACCOUNT not set; Firebase authentication endpoint disabled.');
+}
 
 // Multer Storage Configuration (Cloudinary)
 const storage = new CloudinaryStorage({
@@ -103,6 +114,41 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
+app.post('/api/auth/firebase', async (req, res) => {
+    console.log('Firebase auth endpoint called', req.method, req.path);
+    const { idToken } = req.body;
+    if (!idToken) return res.status(400).json({ error: 'No Firebase ID token provided' });
+    if (!admin.apps.length) return res.status(500).json({ error: 'Firebase Admin is not configured' });
+
+    try {
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        if (!decodedToken.email) return res.status(400).json({ error: 'Firebase user email is required' });
+
+        let user = await User.findOne({ email: decodedToken.email });
+        if (!user) {
+            const baseUsername = decodedToken.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '') || 'user';
+            let username = baseUsername;
+            let count = 1;
+            while (await User.findOne({ username })) {
+                username = `${baseUsername}${count++}`;
+            }
+
+            user = await User.create({
+                username,
+                email: decodedToken.email,
+                password_hash: bcrypt.hashSync(Math.random().toString(36).slice(-16), 10),
+                profile_picture_url: decodedToken.picture || ''
+            });
+        }
+
+        const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: 86400 });
+        res.json({ message: 'Firebase login successful', token, user: { id: user._id, username: user.username, email: user.email, profile_picture_url: user.profile_picture_url } });
+    } catch (err) {
+        console.error('Firebase auth error:', err);
+        res.status(401).json({ error: 'Failed to verify Firebase token' });
+    }
+});
+
 // --- USER ROUTES ---
 
 app.get('/api/user/me', verifyToken, async (req, res) => {
@@ -111,6 +157,29 @@ app.get('/api/user/me', verifyToken, async (req, res) => {
         if (!user) return res.status(404).json({ error: 'User not found' });
 
         res.json(user);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+app.get('/api/user/public/:username', async (req, res) => {
+    try {
+        const user = await User.findOne({ username: req.params.username }).select('username bio profile_picture_url');
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        res.json(user);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+app.get('/api/users/search', async (req, res) => {
+    try {
+        const q = req.query.q;
+        if (!q) return res.json([]);
+        const users = await User.find({ username: { $regex: q, $options: 'i' } })
+            .select('username profile_picture_url')
+            .limit(10);
+        res.json(users);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -203,6 +272,28 @@ app.get('/api/photos/me', verifyToken, async (req, res) => {
     }
 });
 
+app.get('/api/photos/public/:username', async (req, res) => {
+    try {
+        const user = await User.findOne({ username: req.params.username });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        
+        const photos = await Photo.find({ user_id: user._id, deleted_by_user: false })
+            .sort({ created_at: -1 })
+            .lean();
+
+        const formattedPhotos = photos.map(p => ({
+            id: p._id,
+            src: p.filename,
+            title: p.original_name,
+            date: p.created_at
+        }));
+
+        res.json(formattedPhotos);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // "Delete" photo (Soft delete)
 app.delete('/api/photos/:id', verifyToken, async (req, res) => {
     try {
@@ -217,6 +308,14 @@ app.delete('/api/photos/:id', verifyToken, async (req, res) => {
         res.status(500).json({ error: 'Database error' });
     }
 });
+
+// API 404 handler
+app.use('/api', (req, res) => {
+    res.status(404).json({ error: 'API route not found' });
+});
+
+// Serve static HTML/CSS/JS from root
+app.use(express.static(__dirname));
 
 // Serve frontend fallback for SPA
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
