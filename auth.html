@@ -1,15 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AfterGlow - Authentication</title>
     <link rel="stylesheet" href="css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;600;700;800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <style>
+        .btn-google {
+            width: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.75rem !important;
+            padding: 1rem 1.2rem !important;
+            border-radius: 1rem !important;
+            border: 1px solid var(--glass-border) !important;
+            background: rgba(255, 255, 255, 0.03) !important;
+            color: var(--white) !important;
+            font-weight: 600 !important;
+            cursor: pointer !important;
+            transition: var(--transition) !important;
+            font-size: 1.05rem !important;
+            margin-bottom: 0.5rem !important;
+            font-family: 'Outfit', sans-serif !important;
+        }
+        .btn-google:hover {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(255, 255, 255, 0.2) !important;
+            box-shadow: 0 4px 20px rgba(255, 255, 255, 0.05) !important;
+            transform: translateY(-2px) !important;
+        }
+        .btn-google i {
+            color: var(--white) !important;
+            font-size: 1.2rem !important;
+        }
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 1.5rem 0;
+            color: var(--text-light);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .auth-divider::before,
+        .auth-divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .auth-divider:not(:empty)::before {
+            margin-right: .75em;
+        }
+        .auth-divider:not(:empty)::after {
+            margin-left: .75em;
+        }
+        .form-group input::placeholder {
+            color: rgba(255, 255, 255, 0.25);
+            font-size: 0.95rem;
+        }
+    </style>
 </head>
+
 <body>
     <nav class="navbar">
         <div class="nav-container">
@@ -40,16 +99,20 @@
                 <i class="fab fa-google"></i>
                 Continue with Google
             </button>
+            <div class="auth-divider" id="auth-divider">
+                <span>or</span>
+            </div>
             <form id="login-form" class="auth-form">
                 <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" id="login-user" required>
+                    <label>Email or Username</label>
+                    <input type="text" id="login-user" required placeholder="Enter your email or username">
                 </div>
                 <div class="form-group">
                     <label>Password</label>
-                    <input type="password" id="login-password" required>
+                    <input type="password" id="login-password" required placeholder="Enter your password">
                 </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Login</button>
+                <button type="submit" class="btn btn-primary"
+                    style="width: 100%; justify-content: center;">Login</button>
                 <div class="auth-toggle">
                     <a onclick="showForm('reset-form')">Forgot password?</a>
                 </div>
@@ -61,17 +124,18 @@
             <form id="register-form" class="auth-form" style="display:none;">
                 <div class="form-group">
                     <label>Email</label>
-                    <input type="email" id="reg-email" required>
+                    <input type="email" id="reg-email" required placeholder="Enter your email">
                 </div>
                 <div class="form-group">
                     <label>Username</label>
-                    <input type="text" id="reg-username" required>
+                    <input type="text" id="reg-username" required placeholder="Choose a username">
                 </div>
                 <div class="form-group">
                     <label>Password</label>
-                    <input type="password" id="reg-password" required>
+                    <input type="password" id="reg-password" required placeholder="Choose a secure password">
                 </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Create Account</button>
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Create
+                    Account</button>
                 <div class="auth-toggle">
                     Already have an account? <a onclick="showForm('login-form')">Login</a>
                 </div>
@@ -80,9 +144,10 @@
             <form id="reset-form" class="auth-form" style="display:none;">
                 <div class="form-group">
                     <label>Email</label>
-                    <input type="email" id="reset-email" required>
+                    <input type="email" id="reset-email" required placeholder="Enter your email">
                 </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Send Reset Link</button>
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Send Reset
+                    Link</button>
                 <div class="auth-toggle">
                     Remembered your password? <a onclick="showForm('login-form')">Login</a>
                 </div>
@@ -116,6 +181,11 @@
             document.getElementById('register-form').style.display = formId === 'register-form' ? 'flex' : 'none';
             document.getElementById('reset-form').style.display = formId === 'reset-form' ? 'flex' : 'none';
             document.getElementById('auth-title').innerText = formId === 'register-form' ? 'Create Account' : formId === 'reset-form' ? 'Reset Password' : 'Welcome Back';
+            
+            // Hide Google Sign-in and divider when on Reset Password page
+            const isReset = formId === 'reset-form';
+            document.getElementById('google-signin').style.display = isReset ? 'none' : 'inline-flex';
+            document.getElementById('auth-divider').style.display = isReset ? 'none' : 'flex';
         }
 
         function showMessage(message, type = 'error') {
@@ -154,19 +224,13 @@
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('login-user').value;
+            const loginVal = document.getElementById('login-user').value;
             const pass = document.getElementById('login-password').value;
             try {
-                const userCredential = await auth.signInWithEmailAndPassword(email, pass);
-                if (!userCredential.user.emailVerified) {
-                    showMessage('Email not verified. Please check your inbox and verify your email.', 'error');
-                    return;
-                }
-                const idToken = await userCredential.user.getIdToken();
-                const res = await fetch('/api/auth/firebase', {
+                const res = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ idToken })
+                    body: JSON.stringify({ login: loginVal, password: pass })
                 });
                 const data = await res.json();
                 if (res.ok) {
@@ -176,35 +240,33 @@
                     document.getElementById('auth-error').innerText = data.error || 'Login failed.';
                 }
             } catch (err) {
-                console.error('Firebase login error:', err);
-                document.getElementById('auth-error').innerText = err.message || 'Login failed.';
+                console.error('Login error:', err);
+                document.getElementById('auth-error').innerText = 'Could not connect to authentication server. Please try again.';
             }
         });
 
         document.getElementById('register-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('reg-email').value;
-            const username = document.getElementById('reg-username').value;
+            const emailVal = document.getElementById('reg-email').value;
+            const usernameVal = document.getElementById('reg-username').value;
             const pass = document.getElementById('reg-password').value;
             try {
-                const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
-                await userCredential.user.sendEmailVerification();
-                const idToken = await userCredential.user.getIdToken();
-                const res = await fetch('/api/auth/firebase', {
+                const res = await fetch('/api/auth/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ idToken })
+                    body: JSON.stringify({ username: usernameVal, email: emailVal, password: pass })
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    showMessage('Account created. Verification email sent to ' + email + '.', 'success');
-                    showForm('login-form');
+                    // Log them in immediately upon successful registration
+                    localStorage.setItem('ag_token', data.token);
+                    window.location.href = nextPage;
                 } else {
                     document.getElementById('auth-error').innerText = data.error || 'Registration failed.';
                 }
             } catch (err) {
-                console.error('Firebase register error:', err);
-                document.getElementById('auth-error').innerText = err.message || 'Registration failed.';
+                console.error('Registration error:', err);
+                document.getElementById('auth-error').innerText = 'Could not connect to authentication server. Please try again.';
             }
         });
 
@@ -223,4 +285,5 @@
         showForm('login-form');
     </script>
 </body>
+
 </html>
