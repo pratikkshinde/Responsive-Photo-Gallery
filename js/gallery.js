@@ -3,6 +3,12 @@ let allPhotos = [];
 // Load gallery on page load
 document.addEventListener('DOMContentLoaded', () => {
     loadGallery();
+
+    if (typeof window.onRealtimePhotoUpdate === 'function') {
+        window.onRealtimePhotoUpdate(() => {
+            loadGallery();
+        });
+    }
 });
 
 async function loadGallery() {
@@ -21,16 +27,16 @@ async function loadGallery() {
 
 function displayGallery(photos) {
     const galleryGrid = document.getElementById('galleryGrid');
-    
+
     if (!galleryGrid) return;
-    
+
     if (photos.length === 0) {
         galleryGrid.innerHTML = '<div class="loading">No photos found. Upload some photos to get started!</div>';
         return;
     }
-    
-    galleryGrid.innerHTML = photos.map(photo => `
-        <div class="gallery-item" data-id="${photo.id}" data-username="${photo.username}">
+
+    galleryGrid.innerHTML = photos.map((photo, index) => `
+        <div class="gallery-item" data-id="${photo.id}" data-username="${photo.username}" style="--index: ${index}">
             <img src="${photo.src}" alt="Gallery photo" loading="lazy">
             <div class="gallery-item-info">
                 <p><strong><a href="profile.html?username=${photo.username}" style="color:var(--primary-color); text-decoration:none;">@${photo.username}</a></strong></p>
@@ -58,10 +64,10 @@ function openLightbox(imageSrc, username) {
     const lightbox = document.getElementById('lightbox');
     const lightboxImage = document.getElementById('lightboxImage');
     const lightboxCaption = document.getElementById('lightboxCaption');
-    
+
     lightboxImage.src = imageSrc;
     lightboxCaption.innerHTML = `
         <a href="profile.html?username=${username}" class="lightbox-user-link">@${username}</a>
     `;
-    lightbox.style.display = 'block';
+    lightbox.classList.add('modal-active');
 }

@@ -102,56 +102,56 @@
             <div class="auth-divider" id="auth-divider">
                 <span>or</span>
             </div>
-            <form id="login-form" class="auth-form">
-                <div class="form-group">
-                    <label>Email or Username</label>
-                    <input type="text" id="login-user" required placeholder="Enter your email or username">
-                </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="login-password" required placeholder="Enter your password">
-                </div>
-                <button type="submit" class="btn btn-primary"
-                    style="width: 100%; justify-content: center;">Login</button>
-                <div class="auth-toggle">
-                    <a onclick="showForm('reset-form')">Forgot password?</a>
-                </div>
-                <div class="auth-toggle">
-                    Don't have an account? <a onclick="showForm('register-form')">Sign up</a>
-                </div>
-            </form>
+            <div class="auth-forms-container">
+                <form id="login-form" class="auth-form form-active">
+                    <div class="form-group">
+                        <label>Email or Username</label>
+                        <input type="text" id="login-user" required placeholder="Enter your email or username">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="login-password" required placeholder="Enter your password">
+                    </div>
+                    <button type="submit" class="btn btn-primary"
+                        style="width: 100%; justify-content: center;">Login</button>
+                    <div class="auth-toggle">
+                        <a onclick="showForm('reset-form')">Forgot password?</a>
+                    </div>
+                    <div class="auth-toggle">
+                        Don't have an account? <a onclick="showForm('register-form')">Sign up</a>
+                    </div>
+                </form>
 
-            <form id="register-form" class="auth-form" style="display:none;">
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" id="reg-email" required placeholder="Enter your email">
-                </div>
-                <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" id="reg-username" required placeholder="Choose a username">
-                </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="reg-password" required placeholder="Choose a secure password">
-                </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Create
-                    Account</button>
-                <div class="auth-toggle">
-                    Already have an account? <a onclick="showForm('login-form')">Login</a>
-                </div>
-            </form>
+                <form id="register-form" class="auth-form form-hidden-right">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="reg-email" required placeholder="Enter your email">
+                    </div>
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" id="reg-username" required placeholder="Choose a username">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="reg-password" required placeholder="Choose a secure password">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Create Account</button>
+                    <div class="auth-toggle">
+                        Already have an account? <a onclick="showForm('login-form')">Login</a>
+                    </div>
+                </form>
 
-            <form id="reset-form" class="auth-form" style="display:none;">
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" id="reset-email" required placeholder="Enter your email">
-                </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Send Reset
-                    Link</button>
-                <div class="auth-toggle">
-                    Remembered your password? <a onclick="showForm('login-form')">Login</a>
-                </div>
-            </form>
+                <form id="reset-form" class="auth-form form-hidden-right">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="reset-email" required placeholder="Enter your email">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Send Reset Link</button>
+                    <div class="auth-toggle">
+                        Remembered your password? <a onclick="showForm('login-form')">Login</a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -160,13 +160,13 @@
         const nextPage = new URLSearchParams(window.location.search).get('next') || 'profile.html';
 
         const firebaseConfig = {
-            apiKey: "AIzaSyALgK_3uFyyqXTq5-ZBFIIayqFF4QtytYM",
-            authDomain: "afterglow-e34a3.firebaseapp.com",
-            projectId: "afterglow-e34a3",
-            storageBucket: "afterglow-e34a3.firebasestorage.app",
-            messagingSenderId: "361767900984",
-            measurementId: "G-7X9Z4TY95R",
-            appId: "1:361767900984:web:1f83797971957b5b2f53cd"
+            apiKey: "AIzaSyDHDN6BGOcbFGdJcwY4-gHzQIp6GUgciTw",
+            authDomain: "afterglow-pics.firebaseapp.com",
+            projectId: "afterglow-pics",
+            storageBucket: "afterglow-pics.firebasestorage.app",
+            messagingSenderId: "1090843874160",
+            measurementId: "G-RKK3JDQSLB",
+            appId: "1:1090843874160:web:178cdb6440f8e6d0d4f5b5"
         };
 
         firebase.initializeApp(firebaseConfig);

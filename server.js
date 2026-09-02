@@ -208,6 +208,40 @@ app.post('/api/user/profile', verifyToken, upload.single('profilePic'), async (r
     }
 });
 
+// --- REAL-TIME SSE ENDPOINT ---
+let sseClients = [];
+
+app.get('/api/events', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    if (res.flushHeaders) res.flushHeaders();
+
+    // Send initial connection confirmation
+    res.write(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
+
+    sseClients.push(res);
+
+    req.on('close', () => {
+        sseClients = sseClients.filter(c => c !== res);
+    });
+});
+
+// Periodically send ping to prevent connection timeout
+setInterval(() => {
+    sseClients.forEach(client => {
+        try { client.write(': ping\n\n'); } catch (e) {}
+    });
+}, 25000);
+
+function broadcastEvent(type, payload = {}) {
+    const data = `data: ${JSON.stringify({ type, ...payload })}\n\n`;
+    sseClients.forEach(client => {
+        try { client.write(data); } catch (e) {}
+    });
+}
+
 // --- PHOTO ROUTES ---
 
 // Upload photo
@@ -220,6 +254,15 @@ app.post('/api/photos', verifyToken, upload.single('photo'), async (req, res) =>
             user_id: req.userId,
             filename: req.file.path,
             original_name: req.file.originalname
+        });
+
+        // Broadcast real-time photo addition to all connected SSE clients
+        const populated = await newPhoto.populate('user_id', 'username');
+        broadcastEvent('photo_added', {
+            photo_id: newPhoto._id,
+            src: req.file.path,
+            title: req.file.originalname,
+            username: populated.user_id ? populated.user_id.username : 'Unknown'
         });
 
         res.json({ message: 'Photo uploaded successfully', photo_id: newPhoto._id, src: req.file.path });
@@ -303,11 +346,14 @@ app.delete('/api/photos/:id', verifyToken, async (req, res) => {
         );
 
         if (!photo) return res.status(404).json({ error: 'Photo not found or unauthorized' });
+        broadcastEvent('photo_deleted', { photo_id: req.params.id });
         res.json({ message: 'Photo removed from your profile (still archived in DB)' });
     } catch (err) {
         res.status(500).json({ error: 'Database error' });
     }
 });
+
+
 
 // API 404 handler
 app.use('/api', (req, res) => {

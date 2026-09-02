@@ -15,25 +15,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         // Drag and drop
+        uploadArea.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            if (fileInput.disabled) return;
+            uploadArea.classList.add('drag-hover');
+        });
+
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             if (fileInput.disabled) return;
-            uploadArea.style.borderColor = 'var(--primary-dark)';
-            uploadArea.style.background = 'rgba(99, 102, 241, 0.05)';
+            uploadArea.classList.add('drag-hover');
         });
         
         uploadArea.addEventListener('dragleave', (e) => {
             e.preventDefault();
             if (fileInput.disabled) return;
-            uploadArea.style.borderColor = 'var(--primary-color)';
-            uploadArea.style.background = 'var(--light-color)';
+            uploadArea.classList.remove('drag-hover');
         });
         
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             if (fileInput.disabled) return;
-            uploadArea.style.borderColor = 'var(--primary-color)';
-            uploadArea.style.background = 'var(--light-color)';
+            uploadArea.classList.remove('drag-hover');
             
             const files = Array.from(e.dataTransfer.files);
             handleFiles(files);
@@ -125,7 +128,7 @@ function updatePreview() {
         previewSection.style.display = 'block';
         
         previewGrid.innerHTML = selectedFiles.map((file, index) => `
-            <div class="preview-item" data-index="${index}">
+            <div class="preview-item" data-index="${index}" style="--index: ${index}">
                 <img src="${URL.createObjectURL(file)}" alt="Preview">
                 <button class="remove-preview" onclick="removePreview(${index})">
                     <i class="fas fa-times"></i>
@@ -204,6 +207,9 @@ async function uploadPhotos() {
     uploadBtn.textContent = 'Upload Photos';
 
     if (successCount > 0) {
+        if (typeof window.notifyPhotoAdded === 'function') {
+            window.notifyPhotoAdded({ count: successCount });
+        }
         showMessage(`Successfully uploaded ${successCount} photo(s)!`, 'success');
         clearAll();
         setTimeout(() => {

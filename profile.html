@@ -73,16 +73,56 @@
                 </div>
                 <div class="settings-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeSettings()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="submit" class="btn btn-primary" id="save-btn">Save Changes</button>
                 </div>
+                <p id="save-status" style="text-align:center; margin-top:0.8rem; font-size:0.9rem; min-height:1.2em;"></p>
             </form>
         </div>
     </div>
 
+    <!-- Lightbox for profile images -->
+    <div class="lightbox" id="profileLightbox" style="display:none;">
+        <span class="close-lightbox" onclick="closeProfileLightbox()">&times;</span>
+        <img class="lightbox-content" id="profileLightboxImg" src="" alt="Full view">
+        <div class="lightbox-caption" id="profileLightboxCaption"></div>
+    </div>
+
+    <style>
+        /* Empty state CTA */
+        .profile-empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 4rem 2rem;
+            background: rgba(255,255,255,0.03);
+            border: 1px dashed rgba(255,255,255,0.12);
+            border-radius: 2rem;
+            margin: 1rem auto;
+            max-width: 480px;
+        }
+        .empty-state-icon {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(236,72,153,0.15), rgba(139,92,246,0.15));
+            border: 1px solid rgba(236,72,153,0.2);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2rem;
+            color: var(--primary-color);
+        }
+        .profile-empty-state h3 {
+            font-size: 1.5rem; margin-bottom: 0.75rem; color: var(--white);
+        }
+        .profile-empty-state p {
+            color: var(--text-light); margin-bottom: 1.5rem; line-height: 1.6;
+        }
+        /* Gallery items on profile are clickable */
+        .pin-grid .gallery-item { cursor: pointer; }
+    </style>
+
     <script src="js/main.js"></script>
     <script>
         // Profile Loader Logic
-        document.addEventListener('DOMContentLoaded', async () => {
+        async function loadProfileData() {
             const urlParams = new URLSearchParams(window.location.search);
             const targetUsername = urlParams.get('username');
             const token = localStorage.getItem('ag_token');
@@ -155,14 +195,27 @@
                 // Render Photos Grid
                 const grid = document.getElementById('profile-gallery');
                 if (photos && photos.length > 0) {
-                    grid.innerHTML = photos.map(p => `
-                        <div class="gallery-item pin-item">
-                            <img src="${p.src}" alt="${p.title}">
-                            ${isOwner ? `<button class="delete-btn" onclick="deletePhoto('${p.id}')"><i class="fas fa-trash"></i></button>` : ''}
+                    grid.innerHTML = photos.map((p, index) => `
+                        <div class="gallery-item pin-item" data-photo-id="${p.id}" style="--index: ${index}" onclick="openProfileLightbox('${p.src}', '${(p.title || '').replace(/'/g, "\'")}')">
+                            <img src="${p.src}" alt="${p.title || 'Memory'}">
+                            ${isOwner ? `<button class="delete-btn" onclick="event.stopPropagation(); deletePhoto('${p.id}')"><i class="fas fa-trash"></i></button>` : ''}
                         </div>
                     `).join('');
                 } else {
-                    grid.innerHTML = '<div style="color:white; grid-column: 1 / -1; text-align: center; margin-top:20px;">No photos shared yet.</div>';
+                    // Rich empty-state CTA
+                    const emptyMsg = isOwner
+                        ? `<div class="profile-empty-state">
+                                <div class="empty-state-icon"><i class="fas fa-images"></i></div>
+                                <h3>Share Your Memories</h3>
+                                <p>Your gallery is empty. Upload your first photo and let the world see your story.</p>
+                                <a href="upload.html" class="btn btn-primary"><i class="fas fa-cloud-upload-alt"></i> Upload Photos</a>
+                           </div>`
+                        : `<div class="profile-empty-state">
+                                <div class="empty-state-icon"><i class="fas fa-camera"></i></div>
+                                <h3>No Photos Yet</h3>
+                                <p>This user hasn't shared any memories yet.</p>
+                           </div>`;
+                    grid.innerHTML = emptyMsg;
                 }
 
                 // UI Controls
@@ -181,43 +234,152 @@
             } catch (err) {
                 console.error("Failed to load profile", err);
             }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProfileData();
+            if (typeof window.onRealtimePhotoUpdate === 'function') {
+                window.onRealtimePhotoUpdate(() => loadProfileData());
+            }
         });
 
         // Settings Logic
-        function openSettings() { document.getElementById('settingsModal').style.display = 'flex'; }
-        function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
-        
+        const settingsModal = document.getElementById('settingsModal');
+        function openSettings() {
+            settingsModal.classList.add('modal-active');
+        }
+        function closeSettings() {
+            settingsModal.classList.remove('modal-active');
+        }
+
+        // Close modal when clicking the backdrop
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) closeSettings();
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeSettings();
+        });
+
         document.getElementById('settings-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const token = localStorage.getItem('ag_token');
+            const saveBtn = document.getElementById('save-btn');
+            const saveStatus = document.getElementById('save-status');
+
+            // Show loading state
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            saveStatus.style.color = 'var(--text-light)';
+            saveStatus.textContent = '';
+
             const fd = new FormData();
             fd.append('username', document.getElementById('set-username').value);
             fd.append('bio', document.getElementById('set-bio').value);
             const pic = document.getElementById('set-pic').files[0];
-            if(pic) fd.append('profilePic', pic);
+            if (pic) fd.append('profilePic', pic);
 
-            await fetch('/api/user/profile', {
-                method: 'POST',
-                headers: { 'Authorization': 'Bearer ' + token },
-                body: fd
-            });
-            window.location.reload();
+            try {
+                const res = await fetch('/api/user/profile', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    body: fd
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    // Update DOM in-place — no reload needed
+                    const newUsername = document.getElementById('set-username').value;
+                    const newBio = document.getElementById('set-bio').value;
+                    document.getElementById('prof-username').innerText = '@' + newUsername;
+                    document.getElementById('prof-bio').innerText = newBio || 'Add a bio...';
+                    if (data.profile_picture_url) {
+                        document.getElementById('prof-pic').src = data.profile_picture_url;
+                    } else if (pic) {
+                        // Show local preview immediately if server didn't return URL yet
+                        document.getElementById('prof-pic').src = URL.createObjectURL(pic);
+                    }
+
+                    saveStatus.style.color = '#34d399';
+                    saveStatus.textContent = '✓ Profile saved!';
+                    saveBtn.innerHTML = 'Save Changes';
+                    saveBtn.disabled = false;
+
+                    // Auto-close modal after short delay
+                    setTimeout(() => {
+                        closeSettings();
+                        saveStatus.textContent = '';
+                    }, 1200);
+                } else {
+                    throw new Error(data.error || 'Save failed');
+                }
+            } catch (err) {
+                saveStatus.style.color = 'var(--danger-color)';
+                saveStatus.textContent = '✗ ' + (err.message || 'Could not save. Try again.');
+                saveBtn.innerHTML = 'Save Changes';
+                saveBtn.disabled = false;
+            }
         });
 
         async function deletePhoto(id) {
-            if(!confirm("Remove this photo from your profile?")) return;
+            if (!confirm('Remove this photo from your profile?')) return;
             const token = localStorage.getItem('ag_token');
-            await fetch(`/api/photos/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-            window.location.reload();
+            try {
+                const res = await fetch(`/api/photos/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.ok) {
+                    // Remove the card from the DOM instantly — no reload
+                    const card = document.querySelector(`.gallery-item[data-photo-id="${id}"]`);
+                    if (card) {
+                        card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                        card.style.opacity = '0';
+                        card.style.transform = 'scale(0.85)';
+                        setTimeout(() => card.remove(), 320);
+                    }
+                    // Update post count
+                    const countEl = document.getElementById('prof-post-count');
+                    if (countEl) countEl.innerText = Math.max(0, parseInt(countEl.innerText) - 1);
+                }
+            } catch (err) {
+                console.error('Delete error:', err);
+            }
         }
 
         function logout() {
             localStorage.removeItem('ag_token');
             window.location.href = 'index.html';
         }
+
+        // Profile image lightbox
+        function openProfileLightbox(src) {
+            const lb = document.getElementById('profileLightbox');
+            const img = document.getElementById('profileLightboxImg');
+            const cap = document.getElementById('profileLightboxCaption');
+            img.src = src;
+            cap.innerHTML = '';
+            lb.style.display = 'flex';
+            lb.style.animation = 'fadeIn 0.3s ease forwards';
+        }
+
+        function closeProfileLightbox() {
+            const lb = document.getElementById('profileLightbox');
+            lb.style.animation = 'fadeIn 0.25s ease reverse forwards';
+            setTimeout(() => { lb.style.display = 'none'; lb.style.animation = ''; }, 260);
+        }
+
+        document.getElementById('profileLightbox').addEventListener('click', function(e) {
+            if (e.target === this) closeProfileLightbox();
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeProfileLightbox();
+                closeSettings();
+            }
+        });
     </script>
 </body>
 </html>
